@@ -1,0 +1,122 @@
+from flask import Flask, render_template,request
+from datetime import datetime
+import random
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    link = "<h1>歡迎進入施富傑的網站網頁</h1>"
+    link += "<a href=/mis>課程</a><hr>"
+    link += "<a href=/today>今天日期</a><hr>"
+    link += "<a href=/about>關於富傑</a><hr>"
+    link += "<a href=/welcome?u=富傑&dep=靜宜資管>GET傳</a><hr>"
+    link += "<a href=/account>POST傳直(帳號密碼)</a><hr>"
+    link += "<a href=/math>數學運算</a><hr>" 
+    link += "<a href=/cup>擲茭</a><hr>"
+    return link
+
+@app.route("/mis")
+def course():
+    return "<h1>資訊管理導論</h1><a href=/>回到網站首頁</a>"
+
+@app.route("/today")
+def today():
+    now = datetime.now()
+    year = str(now.year)
+    month = str(now.month)
+    day = str(now.day)
+    now = year + "年" + month + "月" + day +"日"
+    return render_template("today.html", datetime = str(now))
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/welcome",methods=["GET"])
+def welcome():
+    x = request.values.get("u")
+    y = request.values.get("dep")
+    # user = request.values.get("nick")
+    return render_template("welcome.html", name = x, dep = y)
+
+@app.route("/account", methods=["GET", "POST"])
+def account():
+    if request.method == "POST":
+        user = request.form["user"]
+        pwd = request.form["pwd"]
+        result = "您輸入的帳號是：" + user + "; 密碼為：" + pwd 
+        return result
+    else:
+        return render_template("account.html")
+
+@app.route("/math", methods=["GET", "POST"])
+def math():
+    if request.method == "POST":
+        try:
+            x = float(request.form["x"])
+            y = float(request.form["y"])
+        except:
+            return "請輸入數字！<a href=/math>返回</a>"
+
+        opt = request.form["opt"]
+
+        if opt == "+":
+            result = x + y
+        elif opt == "-":
+            result = x - y
+        elif opt == "*":
+            result = x * y
+        elif opt == "/":
+            result = x / y if y != 0 else "除數不可為0"
+        else:
+            result = "運算錯誤"
+
+        return f"<h2>結果：{result}</h2><a href=/math>再算一次</a>"
+
+    return """
+    <h2>數學運算</h2>
+    <form method="post">
+        x: <input type="text" name="x"><br><br>
+        運算符號:
+        <select name="opt">
+            <option value="+">+</option>
+            <option value="-">-</option>
+            <option value="*">*</option>
+            <option value="/">/</option>
+        </select><br><br>
+        y: <input type="text" name="y"><br><br>
+        <input type="submit" value="計算">
+    </form>
+    <a href="/">回首頁</a>
+    """
+
+@app.route('/cup', methods=["GET"])
+def cup():
+    # 檢查網址是否有 ?action=toss
+    #action = request.args.get('action')
+    action = request.values.get("action")
+    result = None
+    
+    if action == 'toss':
+        # 0 代表陽面，1 代表陰面
+        x1 = random.randint(0, 1)
+        x2 = random.randint(0, 1)
+        
+        # 判斷結果文字
+        if x1 != x2:
+            msg = "聖筊：表示神明允許、同意，或行事會順利。"
+        elif x1 == 0:
+            msg = "笑筊：表示神明一笑、不解，或者考慮中，行事狀況不明。"
+        else:
+            msg = "陰筊：表示神明否定、憤怒，或者不宜行事。"
+            
+        result = {
+            "cup1": "/static/" + str(x1) + ".jpg",
+            "cup2": "/static/" + str(x2) + ".jpg",
+            "message": msg
+        }
+        
+    return render_template('cup.html', result=result)
+
+if __name__ == "__main__":
+    app.run()
