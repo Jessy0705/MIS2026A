@@ -1,3 +1,6 @@
+import requests
+from bs4 import BeautifulSoup
+
 import os
 import json
 import firebase_admin
@@ -33,6 +36,11 @@ def index():
     link += "<br><a href=/read>讀取Firestore資料(根據lab遞減排序取前4)</a><br>"
     link += "<a href=/search>查詢老師研究室</a><hr>"
     return link
+
+@app.route("/sp1")
+def sp1 ():
+    R = "20260421"
+    return R    
 
 @app.route("/search", methods=["GET", "POST"])
 def search():
