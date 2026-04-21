@@ -35,12 +35,31 @@ def index():
     link += "<a href=/cup>擲茭</a><hr>"
     link += "<br><a href=/read>讀取Firestore資料(根據lab遞減排序取前4)</a><br>"
     link += "<a href=/search>查詢老師研究室</a><hr>"
+    link += "<a href=/movie>即將上映電影</a><hr>"
     return link
 
-@app.route("/sp1")
-def sp1 ():
-    R = "20260421"
-    return R    
+@app.route("/movie")
+def movie():
+    url = "https://www.atmovies.com.tw/movie/next/"
+    data = requests.get(url)
+    data.encoding = "utf-8"
+
+    sp = BeautifulSoup(data.text, "html.parser")
+    result = sp.select(".filmListAllX li")
+
+    output = "<h2>即將上映電影</h2>"
+
+    for item in result:
+        title = item.find("img").get("alt")
+        link = item.find("a").get("href")
+
+        full_link = "https://www.atmovies.com.tw" + link
+
+        output += f"{title}<br>"
+        output += f"<a href='{full_link}' target='_blank'>{full_link}</a><br><br>"
+
+    output += "<a href='/'>回首頁</a>"
+    return output
 
 @app.route("/search", methods=["GET", "POST"])
 def search():
