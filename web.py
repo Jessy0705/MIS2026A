@@ -38,8 +38,100 @@ def index():
     link += "<a href=/movie>即將上映電影</a><hr>"
     link += "<br><a href=/movie2>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
     link += "<a href=/movie3>電影搜尋</a><hr>"
+    link += "<a href=/traffic>易肇事路口查詢</a><hr>"
+    link += "<a href=/weather>氣象預報查詢</a><hr>"
 
     return link
+
+@app.route("/weather", methods=["GET", "POST"])
+def weather():
+    if request.method == "POST":
+        city = request.form["city"]
+        city = city.replace("台", "臺")
+
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        token = "rdec-key-123-45678-011121314"
+
+        url = (
+            "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001"
+            + "?Authorization=" + token
+            + "&format=JSON"
+            + "&locationName=" + city
+        )
+
+        data = requests.get(url, verify=False)
+        jsonData = json.loads(data.text)
+
+        locations = jsonData.get("records", {}).get("location", [])
+
+        if len(locations) == 0:
+            return "查無此縣市資料<br><a href='/weather'>返回</a>"
+
+        weather = locations[0]["weatherElement"][0]["time"][0]["parameter"]["parameterName"]
+        rain = locations[0]["weatherElement"][1]["time"][0]["parameter"]["parameterName"]
+
+        result = f"""
+        <h2>{city} 天氣查詢結果</h2>
+        天氣狀況：{weather}<br>
+        降雨機率：{rain}%<br><br>
+        <a href='/weather'>返回</a>
+        """
+
+        return result
+
+    return """
+    <h2>氣象預報查詢</h2>
+    <form method="post">
+        請輸入縣市：
+        <input type="text" name="city">
+        <input type="submit" value="查詢">
+    </form>
+    <a href="/">回首頁</a>
+    """
+
+@app.route("/traffic", methods=["GET", "POST"])
+def traffic():
+    if request.method == "POST":
+        road = request.form["road"]
+        road = road.replace("台", "臺")
+
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        url = "https://newdatacenter.taichung.gov.tw/api/v1/no-auth/resource.download?rid=a1b899c0-511f-4e3d-b22b-814982a97e41"
+
+        data = requests.get(url, verify=False)
+        jsonData = json.loads(data.text)
+
+        result = f"<h2>{road} 查詢結果</h2>"
+        found = False
+
+        for item in jsonData:
+            if road in item["路口名稱"]:
+                found = True
+                result += (
+                    f"路口：{item['路口名稱']}<br>"
+                    f"發生：{item['總件數']} 件<br>"
+                    f"主要肇因：{item['主要肇因']}<br><hr>"
+                )
+
+        if not found:
+            result += "抱歉，查無相關資料！"
+
+        result += "<br><a href='/traffic'>返回查詢</a>"
+        return result
+
+    return """
+    <h2>易肇事路口查詢系統</h2>
+    <form method="post">
+        請輸入路名：
+        <input type="text" name="road">
+        <input type="submit" value="查詢">
+    </form>
+    <a href="/">回首頁</a>
+    """
 
 @app.route("/movie3", methods=["GET", "POST"])
 def movie3():
