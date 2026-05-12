@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup
 import os
 import json
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, make_response, jsonify
+
 from google.cloud.firestore_v1.base_query import FieldFilter
 # 判斷是在 Vercel 還是本地
 if os.path.exists('serviceAccountKey.json'):
@@ -42,6 +43,17 @@ def index():
     link += "<a href=/weather>氣象預報查詢</a><hr>"
     link += "<a href=/rate>本週新片進DB</a><hr>"
     return link
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    # build a request object
+    req = request.get_json(force=True)
+    # fetch queryResult from json
+    action =  req.get("queryResult").get("action")
+    msg =  req.get("queryResult").get("queryText")
+    info = "動作：" + action + "； 查詢內容：" + msg
+    return make_response(jsonify({"fulfillmentText": info}))
+
 
 @app.route("/rate")
 def rate():
