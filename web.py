@@ -52,7 +52,7 @@ def webhook3():
     
     if (action == "rateChoice"):
         rate = req.get("queryResult").get("parameters").get("rate")
-        info = "我是楊子青開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
+        info = "我是施富傑開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
         
         db = firestore.client()
         # 注意：這裡的集合名稱必須與您 /rate 路由中寫入的名稱一致
