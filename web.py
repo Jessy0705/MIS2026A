@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import os
 import json
 import firebase_admin
-from firebase_admin import credentials, firestore, make_response, jsonify
+from firebase_admin import credentials, firestore
 
 from google.cloud.firestore_v1.base_query import FieldFilter
 # 判斷是在 Vercel 還是本地
@@ -19,7 +19,8 @@ else:
 
 firebase_admin.initialize_app(cred)
 
-from flask import Flask, render_template,request
+from flask import Flask, render_template,request, make_response, jsonify
+
 from datetime import datetime
 import random
 app = Flask(__name__)
