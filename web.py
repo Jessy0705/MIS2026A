@@ -43,7 +43,12 @@ def index():
     link += "<a href=/traffic>易肇事路口查詢</a><hr>"
     link += "<a href=/weather>氣象預報查詢</a><hr>"
     link += "<a href=/rate>本週新片進DB</a><hr>"
+    link += "<a href=/demo>DEMO</a><hr>"
     return link
+
+@app.route("/demo")
+def demo():
+    return render_template("demo.html")
 
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
