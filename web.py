@@ -53,14 +53,20 @@ def index():
 
 @app.route("/AI")
 def AI():
-    # 每次使用者拜訪該路徑時，直接使用全域的 client 呼叫模型
-    response = client.models.generate_content(
-        model='gemini-3.5-flash',
-        contents='我想查詢靜宜大學資管系的評價？',
-    )
-    # 回傳生成的文字
-    return response.text
-
+    try:
+        response = client.models.generate_content(
+            model='gemini-3.5-flash',
+            contents='我想查詢靜宜大學資管系的評價？',
+        )
+        return response.text
+    except Exception as e:
+        # 捕捉所有錯誤（包含 429 額度用完）
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            return "<h3>Gemini AI 今日免費額度（20次）已達上限 😢，請稍後或明天再試！</h3><br><a href='/'>回首頁</a>"
+        
+        # 其他類型的錯誤（例如 API Key 沒設好）
+        return f"<h3>AI 服務暫時無法使用</h3><p>錯誤原因：{error_msg}</p><br><a href='/'>回首頁</a>"
 
 @app.route("/demo")
 def demo():
