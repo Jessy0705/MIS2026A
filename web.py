@@ -128,65 +128,95 @@ def webhook():
 
 @app.route("/rate")
 def rate():
-    #本週新片
-    url = "https://www.atmovies.com.tw/movie/new/"
-    Data = requests.get(url)
-    Data.encoding = "utf-8"
-    sp = BeautifulSoup(Data.text, "html.parser")
-    lastUpdate = sp.find(class_="smaller09").text[5:]
-    print(lastUpdate)
-    print()
+    try:
+        # 本週新片
+        url = "https://www.atmovies.com.tw/movie/new/"
+        Data = requests.get(url, timeout=10) # 加上 timeout 防止被外部網站卡死
+        Data.encoding = "utf-8"
+        sp = BeautifulSoup(Data.text, "html.parser")
+        
+        # 防止網站抓不到更新日期
+        try:
+            lastUpdate = sp.find(class_="smaller09").text[5:]
+        except:
+            lastUpdate = "未知日期"
 
-    result=sp.select(".filmList")
+        result = sp.select(".filmList")
 
-    for x in result:
-        title = x.find("a").text
-        introduce = x.find("p").text
-
-        movie_id = x.find("a").get("href").replace("/", "").replace("movie", "")
-        hyperlink = "http://www.atmovies.com.tw/movie/" + movie_id
-        picture = "https://www.atmovies.com.tw/photo101/" + movie_id + "/pm_" + movie_id + ".jpg"
-
-        r = x.find(class_="runtime").find("img")
-        rate = ""
-        if r != None:
-            rr = r.get("src").replace("/images/cer_", "").replace(".gif", "")
-            if rr == "G":
-                rate = "普遍級"
-            elif rr == "P":
-                rate = "保護級"
-            elif rr == "F2":
-                rate = "輔12級"
-            elif rr == "F5":
-                rate = "輔15級"
-            else:
-                rate = "限制級"
-
-        t = x.find(class_="runtime").text
-
-        t1 = t.find("片長")
-        t2 = t.find("分")
-        showLength = t[t1+3:t2]
-
-        t1 = t.find("上映日期")
-        t2 = t.find("上映廳數")
-        showDate = t[t1+5:t2-8]
-
-        doc = {
-            "title": title,
-            "introduce": introduce,
-            "picture": picture,
-            "hyperlink": hyperlink,
-            "showDate": showDate,
-            "showLength": int(showLength),
-            "rate": rate,
-            "lastUpdate": lastUpdate
-        }
-
+        # 🚀 把 Firestore 初始化移到迴圈外面，提高效能
         db = firestore.client()
-        doc_ref = db.collection("本週新片含分級").document(movie_id)
-        doc_ref.set(doc)
-    return "本週新片已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate
+
+        for x in result:
+            try:
+                title = x.find("a").text if x.find("a") else "未命名電影"
+                introduce = x.find("p").text if x.find("p") else "暫無介紹"
+
+                # 防呆：確保能拿到 href
+                a_tag = x.find("a")
+                if a_tag and a_tag.get("href"):
+                    movie_id = a_tag.get("href").replace("/", "").replace("movie", "")
+                else:
+                    continue # 拿不到 id 就跳過這一部，避免後面崩潰
+
+                hyperlink = "http://www.atmovies.com.tw/movie/" + movie_id
+                picture = "https://www.atmovies.com.tw/photo101/" + movie_id + "/pm_" + movie_id + ".jpg"
+
+                # 處理分級
+                r = x.find(class_="runtime").find("img") if x.find(class_="runtime") else None
+                rate = "限制級" # 預設值
+                if r != None:
+                    rr = r.get("src").replace("/images/cer_", "").replace(".gif", "")
+                    if rr == "G": rate = "普遍級"
+                    elif rr == "P": rate = "保護級"
+                    elif rr == "F2": rate = "輔12級"
+                    elif rr == "F5": rate = "輔15級"
+
+                # 🚀 處理片長與上映日期（加入強大的防空保護）
+                t_element = x.find(class_="runtime")
+                t = t_element.text if t_element else ""
+                
+                showLength = 0 # 預設片長 0 分鐘
+                t1 = t.find("片長")
+                t2 = t.find("分")
+                if t1 != -1 and t2 != -1 and t2 > t1:
+                    try:
+                        showLength = int(t[t1+3:t2].strip())
+                    except ValueError:
+                        showLength = 0 # 如果轉數字失敗，就當作 0 
+
+                showDate = "未提供" # 預設日期
+                d1 = t.find("上映日期")
+                d2 = t.find("上映廳數")
+                if d1 != -1:
+                    if d2 != -1 and d2 > d1:
+                        showDate = t[d1+5:d2-8].strip()
+                    else:
+                        showDate = t[d1+5:].strip() # 如果沒有上映廳數，就切到最後面
+
+                doc = {
+                    "title": title,
+                    "introduce": introduce,
+                    "picture": picture,
+                    "hyperlink": hyperlink,
+                    "showDate": showDate,
+                    "showLength": showLength, # 確保一定是 int
+                    "rate": rate,
+                    "lastUpdate": lastUpdate
+                }
+
+                doc_ref = db.collection("本週新片含分級").document(movie_id)
+                doc_ref.set(doc)
+                
+            except Exception as e:
+                # 如果某一單部電影資料結構怪怪的，只會跳過那一部，不會讓整個網頁崩潰
+                print(f"處理單部電影時跳過，原因: {str(e)}")
+                continue
+
+        return "本週新片已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate
+
+    except Exception as e:
+        # 如果整個連線或大結構爆掉，回傳優雅的錯誤訊息，而不噴 500
+        return f"<h3>爬蟲執行失敗</h3><p>錯誤原因：{str(e)}</p><br><a href='/'>回首頁</a>"
 
 @app.route("/weather", methods=["GET", "POST"])
 def weather():
