@@ -133,7 +133,7 @@ def webhook3():
             try:
                 # #2. 建立設定物件，限制最大 Token 數為 128，防止無法回傳結果
                 ai_config = types.GenerateContentConfig(
-                    max_output_tokens = 128
+                    max_output_tokens = 500
                 )
 
                 # #3. 呼叫 gemini-3.5-flash 模型，並帶入 config 與使用者的問題
