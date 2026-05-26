@@ -48,7 +48,7 @@ def index():
     link += "<a href=/weather>氣象預報查詢</a><hr>"
     link += "<a href=/rate>本週新片進DB</a><hr>"
     link += "<a href=/demo>DEMO</a><hr>"
-    link += "<a href=/AI>Gemini-AI</a><hr>"
+    link += "<a href=/AI>Geminil-AI</a><hr>"
     return link
 
 @app.route("/AI")
@@ -524,4 +524,5 @@ def cup():
     return render_template('cup.html', result=result)
 
 if __name__ == "__main__":
-    app.run()
+    # debug=True 可以讓你在網頁崩潰時，直接在瀏覽器畫面上看到是哪一行程式碼出錯
+    app.run(debug=True)
