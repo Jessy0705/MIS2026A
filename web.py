@@ -139,7 +139,7 @@ def webhook3():
                 # #3. 呼叫 gemini-3.5-flash 模型，並帶入 config 與使用者的問題
                 # 3. 呼叫模型，將 3.5 改成 1.5
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',  # 🚀 改成 1.5-flash 獲得每天 1500 次的超大免費額度
+                    model='gemini-2.0-flash',  # 🚀 改成 1.5-flash 獲得每天 1500 次的超大免費額度
                     contents=user_say,      
                     config=ai_config,       
                 )
