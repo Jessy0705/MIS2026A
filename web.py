@@ -21,6 +21,7 @@ firebase_admin.initialize_app(cred)
 
 from flask import Flask, render_template,request, make_response, jsonify
 from google import genai
+from google.genai import types
 
 from datetime import datetime
 import random
@@ -94,32 +95,65 @@ def demo():
 
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
-    req = request.get_json(force=True)
-    action = req.get("queryResult").get("action")
-    
-    if (action == "rateChoice"):
-        rate = req.get("queryResult").get("parameters").get("rate")
-        info = "我是施富傑開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
+    try:
+        req = request.get_json(force=True)
+        query_result = req.get("queryResult", {})
+        action = query_result.get("action")
         
-        db = firestore.client()
-        # 注意：這裡的集合名稱必須與您 /rate 路由中寫入的名稱一致
-        collection_ref = db.collection("本週新片含分級") 
-        docs = collection_ref.get()
-        
-        result = ""
-        for doc in docs:
-            movie_data = doc.to_dict()  # 建議換個變數名，避免與系統關鍵字 dict 衝突
-            # 檢查該電影的分級是否符合使用者的選擇
-            if rate in movie_data.get("rate", ""):
-                result += "片名：" + movie_data.get("title") + "\n"
-                result += "介紹：" + movie_data.get("hyperlink") + "\n\n"
-        
-        if result == "":
-            info += "目前查無此分級的電影。"
-        else:
-            info += result
+        info = ""
 
-        return make_response(jsonify({"fulfillmentText": info}))
+        # 功能 A：使用者選擇了電影分級 (原本的 Firestore 撈資料邏輯)
+        if action == "rateChoice":
+            rate = query_result.get("parameters", {}).get("rate", "")
+            info = "我是施富傑開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
+            
+            db = firestore.client()
+            collection_ref = db.collection("本週新片含分級") 
+            docs = collection_ref.get()
+            
+            result = ""
+            for doc in docs:
+                movie_data = doc.to_dict()
+                if rate in movie_data.get("rate", ""):
+                    result += "片名：" + movie_data.get("title") + "\n"
+                    result += "介紹：" + movie_data.get("hyperlink") + "\n\n"
+            
+            if result == "":
+                info += "目前查無此分級的電影。"
+            else:
+                info += result
+
+            return make_response(jsonify({"fulfillmentText": info}))
+
+        # 🚀 功能 B：當 Dialogflow 聽不懂時，呼叫 Gemini AI 回答（結合投影片第 2 & 3 步）
+        elif action == "input.unknown":
+            # 取得使用者對聊天機器人說的原始文字
+            user_say = query_result.get("queryText", "哈囉")
+            
+            try:
+                # #2. 建立設定物件，限制最大 Token 數為 128，防止無法回傳結果
+                ai_config = types.GenerateContentConfig(
+                    max_output_tokens = 128
+                )
+
+                # #3. 呼叫 gemini-3.5-flash 模型，並帶入 config 與使用者的問題
+                response = client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=user_say,      # 讓 Gemini 動態回答使用者輸入的內容
+                    config=ai_config,       # 👉 帶入限制 128 tokens 的設定
+                )
+                
+                info = response.text
+
+            except Exception as ai_err:
+                # 如果 Gemini 剛好沒額度或出錯，提供安全罐頭回覆
+                info = "我是施富傑開發的電影聊天機器人。我現在有點累了，請對我說「普遍級」或「限制級」來查電影吧！"
+
+            return make_response(jsonify({"fulfillmentText": info}))
+
+    except Exception as e:
+        # 發生意外錯誤時的安全防護
+        return make_response(jsonify({"fulfillmentText": f"系統忙碌中，請稍後再試。系統訊息: {str(e)}"}))
 
 @app.route("/webhook2", methods=["POST"])
 def webhook2():
