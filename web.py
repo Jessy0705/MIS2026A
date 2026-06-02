@@ -145,7 +145,7 @@ def webhook3():
 
                 # 3. 呼叫穩定的 Gemini 模型（建議使用 gemini-1.5-flash 或 gemini-2.5-flash）
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',  # 這裡建議統一改成官方穩定的 1.5-flash 或 2.5-flash
+                    model='gemini-3.5-flash',  # 這裡建議統一改成官方穩定的 1.5-flash 或 2.5-flash
                     contents=user_say,      
                     config=ai_config,       
                 )
