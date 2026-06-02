@@ -125,29 +125,38 @@ def webhook3():
 
             return make_response(jsonify({"fulfillmentText": info}))
 
-        # 🚀 功能 B：當 Dialogflow 聽不懂時，呼叫 Gemini AI 回答（結合投影片第 2 & 3 步）
+        # 🚀 功能 B：當 Dialogflow 聽不懂時，呼叫 Gemini AI 回答
         elif action == "input.unknown":
             # 取得使用者對聊天機器人說的原始文字
             user_say = query_result.get("queryText", "哈囉")
             
             try:
-                # #2. 建立設定物件，限制最大 Token 數為 128，防止無法回傳結果
-                ai_config = types.GenerateContentConfig(
-                    max_output_tokens = 500
+                # 1. 定義系統指令，限制 AI 的人設與回覆風格
+                instruction_text = (
+                    "你是一個熱心且知識豐富的專業智慧助理。"
+                    "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"         
                 )
 
-                # #3. 呼叫 gemini-3.5-flash 模型，並帶入 config 與使用者的問題
-                # 3. 呼叫模型，將 3.5 改成 1.5
+                # 2. 建立設定物件，加入最大 Token 與系統指令
+                ai_config = types.GenerateContentConfig(
+                    max_output_tokens=500,
+                    system_instruction=instruction_text
+                )
+
+                # 3. 呼叫穩定的 Gemini 模型（建議使用 gemini-1.5-flash 或 gemini-2.5-flash）
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',  # 🚀 改成 1.5-flash 獲得每天 1500 次的超大免費額度
+                    model='gemini-1.5-flash',  # 這裡建議統一改成官方穩定的 1.5-flash 或 2.5-flash
                     contents=user_say,      
                     config=ai_config,       
                 )
                 
-                info = response.text
+                if response.text:
+                    info = response.text
+                else:
+                    info = "抱歉，我現在無法生成回應，請稍後再試。"
 
             except Exception as ai_err:
-                # 如果 Gemini 剛好沒額度或出錯，提供安全罐頭回覆
+                # 如果 Gemini 剛好沒額度、撞到 503 或出錯，提供安全罐頭回覆
                 info = "我是施富傑開發的電影聊天機器人。我現在有點累了，請對我說「普遍級」或「限制級」來查電影吧！"
 
             return make_response(jsonify({"fulfillmentText": info}))
