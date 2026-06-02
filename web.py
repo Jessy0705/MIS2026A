@@ -140,7 +140,7 @@ def webhook3():
                 
                 # 呼叫 Gemini 模型
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',  # 提醒：官方正式名稱為 gemini-2.5-flash，若用 3.5 報錯請改回 2.5
+                    model='gemini-3.1-flash-lite',  # 提醒：官方正式名稱為 gemini-2.5-flash，若用 3.5 報錯請改回 2.5
                     contents=req["queryResult"]["queryText"],
                     config=ai_config,
                 )
