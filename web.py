@@ -145,6 +145,7 @@ def webhook3():
                 )
                 
                 info = response.text
+                print(f"=== Gemini 實際回覆的內容 ===: {info}") # 🚀 加入這行來抓兇手！
 
             except Exception as ai_err:
                 # 如果 Gemini 剛好沒額度或出錯，提供安全罐頭回覆
